@@ -17,8 +17,6 @@ type Power = Double
 type TimeStamp = Double
 type Signal = [(TimeStamp, Power)]
 
--- test commit
-
 -- convenience function for composing higher-order functions
 -- is equivalent to (.).(.) for functions or 
 -- fmap fmap fmap for all functors
