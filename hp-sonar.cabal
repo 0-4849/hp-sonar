@@ -30,7 +30,7 @@ executable hp-sonar
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:    Chart >= 1.9.5
-                    , Chart-cairo >= 1.9.4.1
+                    , Chart-diagrams >= 1.9.5.1
                     , time >= 1.10
                     , base ^>=4.16.4.0
     hs-source-dirs:   app

@@ -5,12 +5,12 @@ module Main where
 -- or, to automaticaly open the generated image:
 -- cabal run && cd images && feh $(ls -At | head -n 1) && cd ..
 
-import Data.List (sortBy) 
+import Data.List (sortBy, transpose) 
 import Data.Function (on)
 import Data.Complex
 import Data.Time.Clock.System
 import Graphics.Rendering.Chart.Easy hiding ((...))
-import Graphics.Rendering.Chart.Backend.Cairo
+import Graphics.Rendering.Chart.Backend.Diagrams
 
 type Angle = Double
 type Power = Double
@@ -79,7 +79,7 @@ perfectScan theta
 signalPeak:: Signal -> (TimeStamp, Power)
 signalPeak = last . sortBy (compare `on` snd) 
 
--- old main function for plotting only the
+-- function for plotting only the
 -- array factor and element factor
 afPlot = do
     title <- ((++ ".png") . ("images/array_factor" ++) . show . systemSeconds) <$> getSystemTime
@@ -205,5 +205,70 @@ timeSim = do
                     reflectionCubic     = map (fst . signalPeak) reflectedSignalsCubic
                     reflectionQuartic   = map (fst . signalPeak) reflectedSignalsQuartic
 
+timeAmpSim = do
+    title <- ((++ ".svg") . ("images/simulation" ++) . show . systemSeconds) <$> getSystemTime
+    toFile def title $ do
+        layout_title .= "Simulation"
+        layout_x_axis . laxis_title .= "Output Angle (Radians)"
+        layout_y_axis . laxis_title .= "Distance (cm)"
+        setColors [opaque blue, opaque green, opaque red, opaque orange, opaque purple]
+        plot (line "Perfect Room Scan" [zip angles perfScan])
+        plot (line "Perceived Room Scan (Linear Loss)"      [zip angles reflectionLinear])
+        plot (line "Perceived Room Scan (test)"   [y2s])
+            where   angles = [-pi/2, (0.01-pi/2)..pi/2]
 
-main = timeSim
+                    -- perfect scan as list
+                    -- y1s :: [Double]
+                    perfScan = map perfectScan angles
+
+                    -- list of functions with AFs for all angles
+                    -- also takes the abs value
+                    -- y2s :: [(Angle -> Power)]
+                    afFuncs = map (magnitude ... arrayFactor) angles
+
+                    -- list of lists, where every sublist is
+                    -- an AF pattern (but in list form, not function)
+                    -- y5s :: [[Power]]
+                    afLists = zipWith ($) (map map afFuncs) (repeat angles)
+
+                    -- the elements of afLists but accounted for signal loss
+                    -- signal loss irl is 1/r^4 (or 1/r^2?), but we simulate for other powers too
+                    -- reflectedAFsLinear :: [[Power]]
+                    reflectedAFsLinear      = map (zipWith (\x y -> (500 * y)/x) perfScan) afLists
+                    reflectedAFsQuadratic   = map (zipWith (\x y -> (500 * y)/(x^2)) perfScan) afLists
+                    reflectedAFsCubic       = map (zipWith (\x y -> (500 * y)/(x^3)) perfScan) afLists
+                    reflectedAFsQuartic     = map (zipWith (\x y -> (500 * y)/(x^4)) perfScan) afLists
+
+                    -- generate pairings of AFs with delays
+                    -- returns a [Signal], a list of Signals
+                    -- each corresponding to an AF
+                    reflectedSignalsLinear      = map (zip perfScan) reflectedAFsLinear
+                    reflectedSignalsQuadratic   = map (zip perfScan) reflectedAFsQuadratic
+                    reflectedSignalsCubic       = map (zip perfScan) reflectedAFsCubic
+                    reflectedSignalsQuartic     = map (zip perfScan) reflectedAFsQuartic
+
+                    -- use a different signal analysis method for plotting
+                    -- on the y-axis which looks at the peak angle
+                    -- reflectedAFsLinear has format where the outer index is time, and the inner is angle,
+                    -- here we transpose this to obtain a format where we have a lists of amplitudes corresponding to angles, 
+                    -- in a list of where index is time
+                    y1s = transpose reflectedAFsLinear
+                    peak signal 
+                        = map fst 
+                        . filter ((>0) . snd) 
+                        . filter ((>= 0.99 * maximum signal) . snd) 
+                        $ zip angles signal
+
+                    y2s = concat . zipWith (\t -> map (\x -> (x,t))) perfScan $ map (peak) y1s
+
+
+
+
+                    reflectionLinear    = map (fst . signalPeak) reflectedSignalsLinear
+                    reflectionQuadratic = map (fst . signalPeak) reflectedSignalsQuadratic
+                    reflectionCubic     = map (fst . signalPeak) reflectedSignalsCubic
+                    reflectionQuartic   = map (fst . signalPeak) reflectedSignalsQuartic
+
+
+
+main = timeAmpSim

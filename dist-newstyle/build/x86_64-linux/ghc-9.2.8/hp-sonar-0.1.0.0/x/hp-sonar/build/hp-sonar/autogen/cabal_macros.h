@@ -20,16 +20,16 @@
   (major1) == 1 && (major2) <  9 || \
   (major1) == 1 && (major2) == 9 && (minor) <= 5)
 #endif /* MIN_VERSION_Chart */
-/* package Chart-cairo-1.9.4.1 */
-#ifndef VERSION_Chart_cairo
-#define VERSION_Chart_cairo "1.9.4.1"
-#endif /* VERSION_Chart_cairo */
-#ifndef MIN_VERSION_Chart_cairo
-#define MIN_VERSION_Chart_cairo(major1,major2,minor) (\
+/* package Chart-diagrams-1.9.5.1 */
+#ifndef VERSION_Chart_diagrams
+#define VERSION_Chart_diagrams "1.9.5.1"
+#endif /* VERSION_Chart_diagrams */
+#ifndef MIN_VERSION_Chart_diagrams
+#define MIN_VERSION_Chart_diagrams(major1,major2,minor) (\
   (major1) <  1 || \
   (major1) == 1 && (major2) <  9 || \
-  (major1) == 1 && (major2) == 9 && (minor) <= 4)
-#endif /* MIN_VERSION_Chart_cairo */
+  (major1) == 1 && (major2) == 9 && (minor) <= 5)
+#endif /* MIN_VERSION_Chart_diagrams */
 /* package base-4.16.4.0 */
 #ifndef VERSION_base
 #define VERSION_base "4.16.4.0"
