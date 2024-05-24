@@ -259,16 +259,13 @@ timeAmpSim = do
                         . filter ((>= 0.99 * maximum signal) . snd) 
                         $ zip angles signal
 
-                    y2s = concat . zipWith (\t -> map (\x -> (x,t))) perfScan $ map (peak) y1s
-
-
+                    y2s = concat . zipWith (\t -> map (flip (,) t)) perfScan $ map peak y1s
 
 
                     reflectionLinear    = map (fst . signalPeak) reflectedSignalsLinear
                     reflectionQuadratic = map (fst . signalPeak) reflectedSignalsQuadratic
                     reflectionCubic     = map (fst . signalPeak) reflectedSignalsCubic
                     reflectionQuartic   = map (fst . signalPeak) reflectedSignalsQuartic
-
 
 
 main = timeAmpSim
