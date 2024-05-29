@@ -65,7 +65,7 @@ arrayFactor steering theta = (/ fromIntegral arrayLength)
     [0..(arrayLength - 1)]
 
 -- a theoretically perfect scan of a room 
--- where the input is an angle and the output is the distance
+-- where the input is an angle and the output is the distance/time
 -- between the observer/TX/RX
 -- the output has an arbitrary range
 perfectScan :: Angle -> Double
@@ -79,6 +79,24 @@ perfectScan theta
 signalPeak:: Signal -> (TimeStamp, Power)
 signalPeak = last . sortBy (compare `on` snd) 
 
+angles = [-pi/2, (0.01-pi/2)..pi/2]
+
+-- perfect scan as list
+-- y1s :: [Double]
+perfScan = map perfectScan angles
+
+-- list of functions with AFs for all angles
+-- also takes the abs value
+-- y2s :: [(Angle -> Power)]
+afFuncs = map (magnitude ... arrayFactor) angles
+
+-- list of lists, where every sublist is
+-- an AF pattern (but in list form, not function)
+-- y5s :: [[Power]]
+-- afLists = zipWith ($) (map map afFuncs) (repeat angles)
+afLists = zipWith map afFuncs (repeat angles)
+
+
 -- function for plotting only the
 -- array factor and element factor
 afPlot = do
@@ -88,15 +106,15 @@ afPlot = do
         layout_x_axis . laxis_title .= "Output Angle (Radians)"
         layout_y_axis . laxis_title .= "Relative Output Power (dB)"
         setColors [opaque blue, opaque green, opaque red]
-        plot (line "Array Factor" [zip xs y1s])
-        plot (line "Element Factor" [zip xs y2s])
-        plot (line "Beam" [zip xs y3s])
-            where   xs = [-pi, (0.01-pi)..pi]
-                    y1s = map (todB . magnitude . arrayFactor arraySteering) xs
-                    y2s = map (todB . elementFactor) xs
+        plot (line "Array Factor" [zip angles y1s])
+        plot (line "Element Factor" [zip angles y2s])
+        plot (line "Beam" [zip angles y3s])
+            where   angles = [-pi, (0.01-pi)..pi]
+                    y1s = map (todB . magnitude . arrayFactor arraySteering) angles
+                    y2s = map (todB . elementFactor) angles
                     y3s = map todB $ zipWith (*) 
-                        (map (magnitude . arrayFactor arraySteering) xs) 
-                        (map elementFactor xs)
+                        (map (magnitude . arrayFactor arraySteering) angles) 
+                        (map elementFactor angles)
 
 -- simulation which only looks at amplitude 
 -- of reflections (totally incorrect)
@@ -107,23 +125,11 @@ ampSim = do
         layout_x_axis . laxis_title .= "Output Angle (Radians)"
         layout_y_axis . laxis_title .= "Distance (cm)"
         setColors [opaque blue, opaque green, opaque red]
-        plot (line "Perfect Room Scan" [zip xs y1s])
-        plot (line "Perceived Room Scan" [zip xs y6s])
-        plot (line "Perceived Room Scan (Magnified)" [zip xs $ map (*5) y6s])
-            where   xs = [-pi/2, (0.01-pi/2)..pi/2]
-                    -- perfect scan as list 
-                    -- y1s :: [Double]
-                    y1s = map perfectScan xs
-                    -- list of functions with AFs for all angles
-                    -- also takes the abs value
-                    -- y2s :: [(Angle -> Power)]
-                    y4s = map (magnitude ... arrayFactor) xs
-                    -- list of lists, where every sublist is 
-                    -- an AF pattern (but in list form, not function)
-                    -- y5s :: [[Power]]
-                    y5s = zipWith ($) (map map y4s) (repeat xs)
-                    y6s = zipWith (((/ dataLength) . sum) ... (zipWith (*))) y5s (repeat y1s)
-                    dataLength = fromIntegral $ length xs
+        plot (line "Perfect Room Scan" [zip angles perfScan])
+        plot (line "Perceived Room Scan" [zip angles y6s])
+        plot (line "Perceived Room Scan (Magnified)" [zip angles $ map (*5) y6s])
+            where   y6s = zipWith (((/ dataLength) . sum) ... (zipWith (*))) afLists (repeat perfScan)
+                    dataLength = fromIntegral $ length angles
 
 -- perfect simulation looking at time 
 -- it takes for signals to reflect 
@@ -135,25 +141,12 @@ perfectTimeSim = do
         layout_x_axis . laxis_title .= "Output Angle (Radians)"
         layout_y_axis . laxis_title .= "Distance (cm)"
         setColors [opaque blue, opaque green, opaque red]
-        plot (line "Perfect Room Scan" [zip xs y1s])
-        plot (line "Perceived Room Scan" [zip xs y7s])
-            where   xs = [-pi/2, (0.01-pi/2)..pi/2]
-                    -- perfect scan as list 
-                    -- y1s :: [Double]
-                    y1s = map perfectScan xs
-                    -- list of functions with AFs for all angles
-                    -- also takes the abs value
-                    -- y2s :: [(Angle -> Power)]
-                    y4s = map (magnitude ... arrayFactor) xs
-                    -- list of lists, where every sublist is 
-                    -- an AF pattern (but in list form, not function)
-                    -- y5s :: [[Power]]
-                    y5s = zipWith ($) (map map y4s) (repeat xs)
-
-                    -- generate pairings of AFs with delays
+        plot (line "Perfect Room Scan" [zip angles perfScan])
+        plot (line "Perceived Room Scan" [zip angles y7s])
+            where   -- generate pairings of AFs with delays
                     -- returns a [Signal], a list of Signals
                     -- each corresponding to an AF
-                    y6s = map (zip y1s) y5s
+                    y6s = map (zip perfScan) afLists
                     -- for every signal, get its peek
                     -- and use that timestamp as plotting value
                     y7s = map (fst . signalPeak) y6s
@@ -165,25 +158,12 @@ timeSim = do
         layout_x_axis . laxis_title .= "Output Angle (Radians)"
         layout_y_axis . laxis_title .= "Distance (cm)"
         setColors [opaque blue, opaque green, opaque red, opaque orange, opaque purple]
-        plot (line "Perfect Room Scan" [zip xs perfScan])
-        plot (line "Perceived Room Scan (Linear Loss)"      [zip xs reflectionLinear])
-        plot (line "Perceived Room Scan (Quadratic Loss)"   [zip xs reflectionQuadratic])
-        plot (line "Perceived Room Scan (Cubic Loss)"       [zip xs reflectionCubic])
-        plot (line "Perceived Room Scan (Quartic Loss)"     [zip xs reflectionQuartic])
-            where   xs = [-pi/2, (0.01-pi/2)..pi/2]
-                    -- perfect scan as list 
-                    -- y1s :: [Double]
-                    perfScan = map perfectScan xs
-                    -- list of functions with AFs for all angles
-                    -- also takes the abs value
-                    -- y2s :: [(Angle -> Power)]
-                    afFuncs = map (magnitude ... arrayFactor) xs
-                    -- list of lists, where every sublist is 
-                    -- an AF pattern (but in list form, not function)
-                    -- y5s :: [[Power]]
-                    afLists = zipWith ($) (map map afFuncs) (repeat xs)
-
-                    -- the elements of afLists but accounted for signal loss
+        plot (line "Perfect Room Scan" [zip angles perfScan])
+        plot (line "Perceived Room Scan (Linear Loss)"      [zip angles reflectionLinear])
+        plot (line "Perceived Room Scan (Quadratic Loss)"   [zip angles reflectionQuadratic])
+        plot (line "Perceived Room Scan (Cubic Loss)"       [zip angles reflectionCubic])
+        plot (line "Perceived Room Scan (Quartic Loss)"     [zip angles reflectionQuartic])
+            where   -- the elements of afLists but accounted for signal loss
                     -- signal loss irl is 1/r^4, but we simulate for other powers too
                     reflectedAFsLinear      = map (zipWith (\x y -> (500 * y)/x) perfScan) afLists
                     reflectedAFsQuadratic   = map (zipWith (\x y -> (500 * y)/(x^2)) perfScan) afLists
@@ -215,22 +195,7 @@ timeAmpSim = do
         plot (line "Perfect Room Scan" [zip angles perfScan])
         plot (line "Perceived Room Scan (Linear Loss)"      [zip angles reflectionLinear])
         plot (line "Perceived Room Scan (test)"   [y2s])
-            where   angles = [-pi/2, (0.01-pi/2)..pi/2]
-
-                    -- perfect scan as list
-                    -- y1s :: [Double]
-                    perfScan = map perfectScan angles
-
-                    -- list of functions with AFs for all angles
-                    -- also takes the abs value
-                    -- y2s :: [(Angle -> Power)]
-                    afFuncs = map (magnitude ... arrayFactor) angles
-
-                    -- list of lists, where every sublist is
-                    -- an AF pattern (but in list form, not function)
-                    -- y5s :: [[Power]]
-                    afLists = zipWith ($) (map map afFuncs) (repeat angles)
-
+            where   
                     -- the elements of afLists but accounted for signal loss
                     -- signal loss irl is 1/r^4 (or 1/r^2?), but we simulate for other powers too
                     -- reflectedAFsLinear :: [[Power]]
@@ -256,7 +221,7 @@ timeAmpSim = do
                     peak signal 
                         = map fst 
                         . filter ((>0) . snd) 
-                        . filter ((>= 0.99 * maximum signal) . snd) 
+                        . filter ((>= 1 * maximum signal) . snd) 
                         $ zip angles signal
 
                     y2s = concat . zipWith (\t -> map (flip (,) t)) perfScan $ map peak y1s
