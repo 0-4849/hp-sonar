@@ -5,7 +5,7 @@ module Main where
 -- or, to automaticaly open the generated image:
 -- cabal run && cd images && feh $(ls -At | head -n 1) && cd ..
 
-import Data.List (sortBy, transpose) 
+import Data.List (maximumBy, transpose) 
 import Data.Function (on)
 import Data.Complex
 import Data.Time.Clock.System
@@ -71,7 +71,7 @@ perfectScan theta
     | otherwise = 3.0
 
 signalPeak:: Signal -> (TimeStamp, Power)
-signalPeak = last . sortBy (compare `on` snd) 
+signalPeak = maximumBy (compare `on` snd) 
 
 angles :: [Angle]
 angles = [-pi/2, (0.01-pi/2)..pi/2]
@@ -88,14 +88,14 @@ afFuncs = map (magnitude ... arrayFactor) angles
 -- list of lists, where every sublist is
 -- an AF pattern (but in list form, not function)
 afLists :: [[Power]]
-afLists = zipWith map afFuncs (repeat angles)
+afLists = map (flip map angles) afFuncs
 
 
 -- function for plotting only the
 -- array factor and element factor
 afPlot :: IO ()
 afPlot = do
-    title <- ((++ ".png") . ("images/array_factor" ++) . show . systemSeconds) <$> getSystemTime
+    title <- (++ ".png") . ("images/array_factor" ++) . show . systemSeconds <$> getSystemTime
     toFile def title $ do
         layout_title .= "Array Factor"
         layout_x_axis . laxis_title .= "Output Angle (Radians)"
@@ -117,7 +117,7 @@ afPlot = do
 -- of reflections (totally incorrect)
 ampSim :: IO ()
 ampSim = do
-    title <- ((++ ".png") . ("images/simulation" ++) . show . systemSeconds) <$> getSystemTime
+    title <- (++ ".png") . ("images/simulation" ++) . show . systemSeconds <$> getSystemTime
     toFile def title $ do
         layout_title .= "Simulation"
         layout_x_axis . laxis_title .= "Output Angle (Radians)"
@@ -134,7 +134,7 @@ ampSim = do
 -- this assumes: signal don't get weaker
 perfectTimeSim :: IO ()
 perfectTimeSim = do
-    title <- ((++ ".png") . ("images/simulation" ++) . show . systemSeconds) <$> getSystemTime
+    title <- (++ ".png") . ("images/simulation" ++) . show . systemSeconds <$> getSystemTime
     toFile def title $ do
         layout_title .= "Simulation"
         layout_x_axis . laxis_title .= "Output Angle (Radians)"
@@ -152,7 +152,7 @@ perfectTimeSim = do
 
 timeSim :: IO ()
 timeSim = do
-    title <- ((++ ".png") . ("images/simulation" ++) . show . systemSeconds) <$> getSystemTime
+    title <- (++ ".png") . ("images/simulation" ++) . show . systemSeconds <$> getSystemTime
     toFile def title $ do
         layout_title .= "Simulation"
         layout_x_axis . laxis_title .= "Output Angle (Radians)"
@@ -187,7 +187,7 @@ timeSim = do
 
 timeAmpSim :: IO ()
 timeAmpSim = do
-    title <- ((++ ".svg") . ("images/simulation" ++) . show . systemSeconds) <$> getSystemTime
+    title <- (++ ".svg") . ("images/simulation" ++) . show . systemSeconds <$> getSystemTime
     toFile def title $ do
         layout_title .= "Simulation"
         layout_x_axis . laxis_title .= "Output Angle (Radians)"
@@ -227,10 +227,10 @@ timeAmpSim = do
                         . filter ((>= 1 * maximum signal) . snd) 
                         $ zip angles signal
 
-                    y2s = concat . zipWith (\t -> map (flip (,) t)) perfScan $ map peak y1s
+                    y2s = concat . zipWith (map . flip (,)) perfScan $ map peak y1s
 
                     y3s = transpose reflectedAFsQuadratic
-                    y4s = concat . zipWith (\t -> map (flip (,) t)) perfScan $ map peak y3s
+                    y4s = concat . zipWith (map . flip (,)) perfScan $ map peak y3s
 
 
 
