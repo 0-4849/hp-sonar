@@ -5,7 +5,7 @@ module Main where
 -- or, to automaticaly open the generated image:
 -- cabal run && cd images && feh $(ls -At | head -n 1) && cd ..
 
-import Data.List (maximumBy, transpose) 
+import Data.List (maximumBy, singleton, transpose) 
 import Data.Function (on)
 import Data.Complex
 import Data.Time.Clock.System
@@ -33,8 +33,8 @@ weights :: [Complex Double]
 weights = replicate arrayLength 1.0
 
 -- spacing of the array elements in lambda
-spacing :: Double
-spacing = 0.5
+-- spacing :: Double
+-- spacing = 0.5
 
 todB :: Power -> Power
 todB = (20*) . logBase 10 
@@ -47,8 +47,8 @@ elementFactor theta
 
 
 -- array factor as a function
-arrayFactor :: Angle -> Angle ->  Complex Power
-arrayFactor steering theta = (/ fromIntegral arrayLength)
+arrayFactor :: Double -> Angle -> Angle ->  Complex Power
+arrayFactor spacing steering theta = (/ fromIntegral arrayLength)
     . sum 
     . zipWith (*) weights 
     $ map
@@ -83,7 +83,7 @@ perfScan = map perfectScan angles
 -- list of functions with AFs for all angles
 -- also takes the abs value
 afFuncs :: [Angle -> Power]
-afFuncs = map (magnitude ... arrayFactor) angles
+afFuncs = map (magnitude ... arrayFactor 0.5) angles
 
 -- list of lists, where every sublist is
 -- an AF pattern (but in list form, not function)
@@ -107,10 +107,10 @@ afPlot = do
             where   -- the angle the array is steering in
                     arraySteering :: Angle
                     arraySteering = (-20/180) * pi
-                    y1s = map (todB . magnitude . arrayFactor arraySteering) angles
+                    y1s = map (todB . magnitude . arrayFactor 0.5 arraySteering) angles
                     y2s = map (todB . elementFactor) angles
                     y3s = map todB $ zipWith (*) 
-                        (map (magnitude . arrayFactor arraySteering) angles) 
+                        (map (magnitude . arrayFactor 0.5 arraySteering) angles) 
                         (map elementFactor angles)
 
 -- simulation which only looks at amplitude 
@@ -239,5 +239,30 @@ timeAmpSim = do
                     reflectionCubic     = map (fst . signalPeak) reflectedSignalsCubic
                     reflectionQuartic   = map (fst . signalPeak) reflectedSignalsQuartic
 
+elementSpacingPlot :: IO ()
+elementSpacingPlot = do
+    title <- (++ ".svg") . ("images/element_spacing_plot" ++) . show . systemSeconds <$> getSystemTime
+    toFile def title $ do
+        layout_title .= "Array Factors"
+        layout_x_axis . laxis_title .= "Output Angle (Radians)"
+        layout_y_axis . laxis_title .= "Relative Output Power (dB)"
+        setColors [opaque blue, opaque green, opaque red]
+        mapM_ (plot . line "Array Factor" . singleton) afGraphs
+            where   -- the angle the array is steering in
+                    arraySteering :: Angle
+                    arraySteering = (0/180) * pi
+
+                    spacings :: [Double]
+                    spacings = [0.1, 0.2 .. 1.0]
+
+                    afFuncs2 :: [Angle -> Angle -> Complex Power]
+                    afFuncs2 = map arrayFactor spacings
+
+                    afPlots :: [[Double]]
+                    afPlots = map (map (todB . magnitude) . flip map angles . ($ arraySteering)) afFuncs2
+
+                    afGraphs = map (zip angles) afPlots
+
+
 main :: IO ()
-main = timeAmpSim
+main = elementSpacingPlot
