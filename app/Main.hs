@@ -76,6 +76,9 @@ signalPeak = maximumBy (compare `on` snd)
 angles :: [Angle]
 angles = [0.01-pi/2, (0.02-pi/2)..pi/2-0.01]
 
+sonarAngles :: [Angle]
+sonarAngles = [(-40/180)*pi, (-40/180)*pi + 0.005 .. (40/180)*pi]
+
 -- perfect scan as list
 perfScan :: [Double]
 perfScan = map perfectScan angles
@@ -253,13 +256,13 @@ elementSpacingPlot = do
                     arraySteering = (0/180) * pi
 
                     spacings :: [Double]
-                    spacings = [0.1, 0.2 .. 1.0]
+                    spacings = [0.2, 0.4 .. 2.0]
 
                     afFuncs2 :: [Angle -> Angle -> Complex Power]
                     afFuncs2 = map arrayFactor spacings
 
                     afPlots :: [[Double]]
-                    afPlots = map (map (todB . magnitude) . flip map angles . ($ arraySteering)) afFuncs2
+                    afPlots = map (map (todB . magnitude) . flip map sonarAngles . ($ arraySteering)) afFuncs2
 
                     afGraphs = map (zip angles) afPlots
 
