@@ -74,7 +74,7 @@ signalPeak:: Signal -> (TimeStamp, Power)
 signalPeak = maximumBy (compare `on` snd) 
 
 angles :: [Angle]
-angles = [-pi/2, (0.01-pi/2)..pi/2]
+angles = [0.01-pi/2, (0.02-pi/2)..pi/2-0.01]
 
 -- perfect scan as list
 perfScan :: [Double]
@@ -246,7 +246,7 @@ elementSpacingPlot = do
         layout_title .= "Array Factors"
         layout_x_axis . laxis_title .= "Output Angle (Radians)"
         layout_y_axis . laxis_title .= "Relative Output Power (dB)"
-        setColors [opaque blue, opaque green, opaque red]
+        setColors $ map opaque [pink, magenta, red, orange, yellow, green, blue, purple, brown, black]
         mapM_ (plot . line "Array Factor" . singleton) afGraphs
             where   -- the angle the array is steering in
                     arraySteering :: Angle
