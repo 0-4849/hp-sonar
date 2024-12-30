@@ -52,34 +52,41 @@ void setup() {
 }
 
 void loop() {
-  delay(50);
+  if (Serial.available() >= 2) {
+    unsigned int upper_byte = Serial.read();
+    unsigned int lower_byte = Serial.read();
 
-  pwm_set_mask_enabled(-1);
-  
-  sleep_us(400);
-  
-  pwm_set_mask_enabled(0);
+    double phase_shift = (((double) (upper_byte * 256 + lower_byte)) / 65536.0) * 360.0;
 
-  start_time = micros();
+    // leaving this comment here, because these are not the same. WTF? bitshift leads to garbage, but why..?
+//    Serial.println(upper_byte * 256 + lower_byte);
+//    Serial.println(upper_byte << 8 + lower_byte);
+
+    set_array_steering(phase_shift);
+    
+    pwm_set_mask_enabled(-1);
   
-  while (micros() - start_time < timeout_us) {
-    // TODO: might add a(n unrolled) loop so micros() doesn't have
-    // to be checked so often
-    // take 5 measurements (each ~2us apart) to ensure we always
-    // measure the maximum of the sine wave
-    for (int i = 0; i < buf_len; i++) {
-      read_buf[i] = analogRead(READ_PIN);
+    sleep_us(400);
+  
+    pwm_set_mask_enabled(0);
+
+    start_time = micros();
+  
+    while (micros() - start_time < timeout_us) {
+      // take buf_len measurements (each ~2us apart) to ensure we always
+      // measure the maximum of the sine wave (period is 25us, so we get pretty close)
+      for (int i = 0; i < buf_len; i++) {
+        read_buf[i] = analogRead(READ_PIN);
+      }
+
+      Serial.write(read_buf, buf_len);
     }
-
-    Serial.write(read_buf, buf_len);
   }
 }
 
-// angle in degrees
+// angle in degrees (note this is the phase difference between
+// elements, NOT the actual steering angle (one is the tangent of the other (i think)))
 void set_array_steering(float angle) {
-  // disable all PWM channels
-  pwm_set_mask_enabled(0);
-
   // Set period of 128 MHz / 40 kHz = 3200 cycles 
   for (int pwm_slice = 0; pwm_slice <= 7; pwm_slice++) {
     int CC_shift = (int) ((time_delays[pwm_slice] / 25 + (float) pwm_slice * angle / 360) * 3200);
@@ -87,10 +94,5 @@ void set_array_steering(float angle) {
     CC_shift += 3200;
     CC_shift %= 3200;
     pwm_set_counter(pwm_slice, CC_shift);
-//    Serial.println((float) pwm_slice * angle / 360);
-//    Serial.println(CC_shift);
   }
-
-  // enable all PWM slices at once to ensure the set phase shift is accurately applied
-  pwm_set_mask_enabled(-1);
 }
