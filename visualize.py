@@ -27,8 +27,8 @@ maxima_per_buffer_plot = win.addPlot(title="maxima of signal per buffer (24)", r
 maxima_per_buffer_plot.setYRange(0, 128, padding=0)
 
 
-img_width = 512
-img_height = 512
+img_width = 400
+img_height = 400
 img_plot = win.addPlot(title="scan", col=1, row=0, rowspan=3)
 img_data = np.zeros((img_height, img_width), dtype=int)
 img_item = pg.ImageItem(image=img_data, levels=(0,128))
@@ -71,23 +71,27 @@ with serial.Serial('/dev/ttyACM0', 12_000_000, timeout=0.02) as ser:
 #					maximum_values.append((i, norm_values[i]))
 #
 			maximum_per_buffer_values = np.max(np.array(norm_values.reshape((-1, 24))), axis=1)
-				
-			stroke_res = 5
-			angles = [i / stroke_res for i in range(int(stroke_res * (angle - angle_step / 2)), int(stroke_res * (angle + angle_step / 2)))]
+			rect_height = math.floor(img_height / len(maximum_per_buffer_values)) + 1
+			print(rect_height)
 
 			for (i, val) in enumerate(maximum_per_buffer_values):
+				normalized_distance = i / len(maximum_per_buffer_values)
 				# x = img_width // 2 + int(img_width * i / (2 * len(values)) * math.sin(math.radians(angle)))
 				# y = int(img_width * math.cos(math.radians(angle)) * i / len(values))
-				y0 = img_width * i / (2 * len(maximum_per_buffer_values)) 
-				x0 = img_height * i / len(maximum_per_buffer_values)
 				
-				#square_size = (angle_step / (end_angle - start_angle)) * (math.pi * img_height * (end_angle - start_angle) / 360) * i / len(maximum_per_buffer_values)
+				rect_width = math.ceil(
+					(angle_step / (end_angle - start_angle)) 
+					* (math.pi * img_height * (end_angle - start_angle) / 360) 
+					* i / len(maximum_per_buffer_values)
+				)
 
-				for theta in angles:
-					y = img_width // 2 + int(y0 * math.sin(math.radians(theta)))
-					x = int(x0 * math.cos(math.radians(theta)))
+				halved, remainder = divmod(rect_width, 2)
 
-					img_data[y,x] = val
+				x = img_width // 2 + int(img_width * normalized_distance * math.sin(math.radians(angle)) / 2)
+				y = int(img_height * normalized_distance * math.cos(math.radians(angle)))
+
+				# note that we swap the x and y indices to make the scan appear vertical instead of horizontal
+				img_data[x - halved : x + halved + remainder, y : y + rect_height] = val
 
 
 			inverted = 128 - img_data
