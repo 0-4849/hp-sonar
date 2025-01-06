@@ -9,7 +9,7 @@ wavelength = 0.858
 
 start_angle = -30
 end_angle = 30
-angle_step = 1
+angle_step = 2
 
 # uncomment for light mode
 #pg.setConfigOption('background', 'w')
@@ -44,6 +44,7 @@ win.show()
 
 with serial.Serial('/dev/ttyACM0', 12_000_000, timeout=0.02) as ser:
 	while True:
+		t0 = time.time()
 		for angle in range(start_angle, end_angle, angle_step):
 			phase_difference = 360.0 * spacing * math.sin(math.radians(angle)) / wavelength
 			phase_difference %= 360.0
@@ -52,17 +53,17 @@ with serial.Serial('/dev/ttyACM0', 12_000_000, timeout=0.02) as ser:
 			# raspberry pi pico should return one measurement
 			ser.write(int(65536 * phase_difference / 360.0).to_bytes(2, "big"))
 
-			t0 = time.time()
+			#t0 = time.time()
 	
 			while ser.in_waiting == 0 : continue
 
 			b = ser.read(2**32)
 
-			t1 = time.time()
+			#t1 = time.time()
 
 			values = np.frombuffer(b, dtype=np.uint8).astype(int)
 			norm_values = np.abs(values - 128)
-			print(f"received {len(values)} datapoints")
+			# print(f"received {len(values)} datapoints")
 
 #			maximum_values = []
 #			
@@ -72,7 +73,6 @@ with serial.Serial('/dev/ttyACM0', 12_000_000, timeout=0.02) as ser:
 #
 			maximum_per_buffer_values = np.max(np.array(norm_values.reshape((-1, 24))), axis=1)
 			rect_height = math.floor(img_height / len(maximum_per_buffer_values)) + 1
-			print(rect_height)
 
 			for (i, val) in enumerate(maximum_per_buffer_values):
 				normalized_distance = i / len(maximum_per_buffer_values)
@@ -102,7 +102,8 @@ with serial.Serial('/dev/ttyACM0', 12_000_000, timeout=0.02) as ser:
 
 			QtGui.QGuiApplication.processEvents()
 
-			t2 = time.time()
-			print(f"took {t1-t0} for requesting data")
-			print(f"took {t2-t1} for rendering")
+			#t2 = time.time()
+			#print(f"took {t1-t0} for requesting data")
+			#print(f"took {t2-t1} for rendering")
+		print(f"took {time.time()-t0} for one entire frame")
 
