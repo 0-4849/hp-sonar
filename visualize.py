@@ -9,7 +9,7 @@ wavelength = 0.858
 
 start_angle = -30
 end_angle = 30
-angle_step = 2
+angle_step = 1
 
 # uncomment for light mode
 #pg.setConfigOption('background', 'w')
@@ -30,7 +30,8 @@ maxima_per_buffer_plot.setYRange(0, 128, padding=0)
 img_width = 400
 img_height = 400
 img_plot = win.addPlot(title="scan", col=1, row=0, rowspan=3)
-img_data = np.zeros((img_height, img_width), dtype=int)
+img_plot.setAspectLocked(img_height / img_width)
+img_data = np.zeros((img_width, img_height), dtype=int)
 img_item = pg.ImageItem(image=img_data, levels=(0,128))
 img_plot.addItem(img_item)
 
@@ -81,17 +82,17 @@ with serial.Serial('/dev/ttyACM0', 12_000_000, timeout=0.02) as ser:
 				
 				rect_width = math.ceil(
 					(angle_step / (end_angle - start_angle)) 
-					* (math.pi * img_height * (end_angle - start_angle) / 360) 
-					* i / len(maximum_per_buffer_values)
+					* (math.pi * img_height * (end_angle - start_angle) / 180) 
+					* normalized_distance
 				)
 
 				halved, remainder = divmod(rect_width, 2)
 
-				x = img_width // 2 + int(img_width * normalized_distance * math.sin(math.radians(angle)) / 2)
+				x = img_width // 2 + int(img_height * normalized_distance * math.sin(math.radians(angle)))
 				y = int(img_height * normalized_distance * math.cos(math.radians(angle)))
 
 				# note that we swap the x and y indices to make the scan appear vertical instead of horizontal
-				img_data[x - halved : x + halved + remainder, y : y + rect_height] = val
+				img_data[x : x + rect_width, y : y + rect_height] = val
 
 
 			inverted = 128 - img_data
